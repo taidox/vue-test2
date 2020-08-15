@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <b-container fluid="lg">
+    <b-container fluid="md">
       <nav-bar />
       <router-view />
     </b-container>
@@ -20,14 +20,6 @@ export default {
 </script>
 
 <style>
-#app {
-  /* font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px; */
-}
 .view-route {
   margin: 6px;
 }

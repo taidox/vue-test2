@@ -10,6 +10,7 @@
           </b-col>
         </b-row>
       </div>
+      <t-bike-stations></t-bike-stations>
     </div>
   </b-container>
 </template>
@@ -18,6 +19,7 @@
 import TodoItem from "./TodoItem.vue";
 import AddTodo from "./AddTodo.vue";
 import Carousel from "./Carousel.vue";
+import TBikeStations from "./TBikeStations";
 
 export default {
   name: "Home",
@@ -25,6 +27,7 @@ export default {
     TodoItem,
     AddTodo,
     Carousel,
+    TBikeStations,
   },
   data() {
     return {

@@ -23,10 +23,7 @@
       </a>
 
       <!-- Slides with custom text -->
-      <b-carousel-slide
-        img-src="https://picsum.photos/1024/480/?image=54"
-        caption="I am testing caption."
-      >
+      <b-carousel-slide img-src="https://picsum.photos/1024/480/?image=54" caption="中文測試">
         <h1>Hello world!</h1>
       </b-carousel-slide>
 
