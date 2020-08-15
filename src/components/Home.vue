@@ -2,30 +2,19 @@
   <b-container fluid="lg">
     <div>
       <carousel></carousel>
-      <add-todo v-on:add-todo="addTodo"></add-todo>
-      <div v-for="todo in todos" v-bind:key="todo.id">
-        <b-row>
-          <b-col>
-            <todo-item v-bind:todo="todo" v-on:del-todo="delTodo"></todo-item>
-          </b-col>
-        </b-row>
-      </div>
+
       <t-bike-stations></t-bike-stations>
     </div>
   </b-container>
 </template>
 
 <script>
-import TodoItem from "./TodoItem.vue";
-import AddTodo from "./AddTodo.vue";
 import Carousel from "./Carousel.vue";
 import TBikeStations from "./TBikeStations";
 
 export default {
   name: "Home",
   components: {
-    TodoItem,
-    AddTodo,
     Carousel,
     TBikeStations,
   },
