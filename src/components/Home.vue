@@ -3,20 +3,20 @@
     <div>
       <carousel></carousel>
 
-      <t-bike-stations></t-bike-stations>
+      <t-bike-status></t-bike-status>
     </div>
   </b-container>
 </template>
 
 <script>
 import Carousel from "./Carousel.vue";
-import TBikeStations from "./TBikeStations";
+import TBikeStatus from "./TBikeStatus.vue";
 
 export default {
   name: "Home",
   components: {
     Carousel,
-    TBikeStations,
+    TBikeStatus,
   },
   data() {
     return {
