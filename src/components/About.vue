@@ -1,7 +1,7 @@
 <template>
   <div>
     <b-row :class="{'d-none':!isShow}">
-      <p>This is About page</p>
+      <div>This is About page.</div>
     </b-row>
     <button type="button" @click="toggle">Toggle</button>
   </div>
