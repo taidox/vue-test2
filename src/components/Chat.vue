@@ -162,9 +162,9 @@ export default {
     },
   },
   mounted: function () {
-    //const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
-    //this.socket = io(HEROKU_SERVER);
-    this.socket = io("http://localhost:5000");
+    const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
+    this.socket = io(HEROKU_SERVER);
+    //this.socket = io("http://localhost:5000");
     this.socket.on("connect", () => {
       console.log("chat socket connected.", this.socket.connected);
     });
@@ -328,16 +328,17 @@ export default {
   flex-grow: 0;
   overflow-wrap: break-word;
   padding: 3px 10px 5px 10px;
-  border-radius: 3px;
   max-width: 90%;
 }
 
 .sent-text {
   background-color: #d7e4ff;
+  border-radius: 8px 0 11px 8px;
 }
 
 .received-text {
   background-color: #f5f6f8;
+  border-radius: 0 8px 8px 11px;
 }
 
 select:focus {
