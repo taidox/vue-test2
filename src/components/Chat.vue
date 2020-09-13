@@ -1,37 +1,55 @@
 <template>
   <div>
-    <b-button
-      class="chat-button btn-outline-none"
-      v-show="showButton"
-      size="lg"
-      v-on:click="onButtonClick"
-    >聊天</b-button>
-    <transition name="chat-scale">
-      <div class="chat-main-container" v-show="!showButton">
-        <div class="chat-title-container">
-          <div class="mini-button" @click="onMinimizeChat"></div>
-        </div>
-        <div class="center-container">
-          <div class="chat-content" ref="chatContentDiv">
-            <div
-              class="chat-list"
-              :class="[content.me?'my-list':'other-list']"
-              v-for="content in chatContent"
-              :key="content.id"
-            >
-              <div :class="[content.me?'my-text':'other-text', 'chat-text']">{{content.text}}</div>
-            </div>
+    <!-- <transition name="chat-scale"> -->
+    <div :class="['chat-main-layout', {'minimized': minimize}]">
+      <div class="chat-title-layout">
+        <div class="chat-title-left">
+          <div :class="['chat-button', {'minimized': minimize}]" v-on:click="onChatButtonClick">
+            <strong>聊天</strong>
           </div>
-          <select v-model="talkTo" class="chat-users" id="chat-users" size="2" ref="selectUser">
-            <option class="user" v-for="u in userList" :value="u" :key="u">{{u}}</option>
-          </select>
         </div>
-        <div class="chat-input-container">
-          <input v-model="outputMsg" id="chat-input" @keyup.13="sendMessage" />
-          <button v-on:click="sendMessage">Send</button>
+        <div class="chat-title-right">
+          <div :class="['mini-button', {'minimized': minimize}]" @click="onMinimizeChat"></div>
         </div>
       </div>
-    </transition>
+      <div :class="['chat-windows-layout',{'minimized': minimize}]">
+        <div class="chat-content-layout">
+          <div class="chat-conversation-laout">
+            <div class="chat-item-layout" v-for="content in chatContent" :key="content.id">
+              <div v-if="content.isSent" class="sent-item">
+                <div class="chat-text sent-text">{{content.text}}</div>
+              </div>
+              <div v-else class="received-item-layout">
+                <div class="received-item">
+                  <div>{{content.from==='All'?'廣播':content.from}}：</div>
+                </div>
+                <div class="received-item">
+                  <div class="chat-text received-text">{{content.text}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <b-list-group class="chat-user-list">
+            <b-list-group-item
+              class="chat-user"
+              v-for="user in userList"
+              :key="user.name"
+              :value="user.name"
+              @click="onClickUser"
+              :class="{'selected-user' : user.name === talkTo}"
+            >
+              {{user.name}}
+              <b-badge class="unread" v-if="user.unread>0">{{user.unread}}</b-badge>
+            </b-list-group-item>
+          </b-list-group>
+        </div>
+        <div class="chat-input-layout">
+          <input v-model="outputMsg" class="chat-input" @keyup.13="sendMessage" />
+          <button class="chat-send" v-on:click="sendMessage">Send</button>
+        </div>
+      </div>
+    </div>
+    <!-- </transition> -->
   </div>
 </template>
 
@@ -43,28 +61,66 @@ export default {
   data() {
     return {
       showButton: true,
+      minimize: true,
       miniIcon: require("../assets/minimize.svg"),
-      fullChatContent: { All: [] },
+      fullChatContent: {},
       chatContent: [],
       talkTo: "",
       counter: 1,
       socket: null,
       myUserData: null,
       outputMsg: "",
-      userList: [],
+      stylePopout: {
+        width: "350px",
+        height: "350px",
+      },
     };
   },
+  computed: {
+    userList: function () {
+      let temp = [];
+      Object.keys(this.fullChatContent).forEach((name) => {
+        temp.push({
+          name: name,
+          unread: this.fullChatContent[name].unread,
+          latestMsgTime: this.fullChatContent[name].latestMsgTime,
+        });
+      });
+      let sorted = temp.sort((a, b) => {
+        return a.name === "All"
+          ? -1
+          : b.name === "All"
+          ? 1
+          : b.latestMsgTime - a.latestMsgTime;
+      });
+      console.log("Sorted :", sorted);
+      return sorted;
+    },
+  },
   methods: {
-    onButtonClick() {
-      this.showButton = !this.showButton;
+    onChatButtonClick() {
+      this.minimize = !this.minimize;
       this.scrollChat();
     },
     onMinimizeChat() {
-      this.showButton = !this.showButton;
+      this.minimize = !this.minimize;
+    },
+    onClickUser(event) {
+      this.talkTo = event.target.getAttribute("value");
+      this.fullChatContent[this.talkTo].unread = 0;
+      /* this.$nextTick(() => {
+        if (!event.target.classList.contains("selected-user")) {
+          document.querySelectorAll(".chat-user").forEach((e) => {
+            e.classList.remove("selected-user");
+          });
+          event.target.classList.add("selected-user");
+          this.talkTo = event.target.getAttribute("value");
+        }
+        this.fullChatContent[event.target.getAttribute("value")].unread = 0;
+      }); */
     },
     sendMessage() {
       if (this.socket.connected && this.outputMsg.length > 0) {
-        console.log("sending meeesag:", this.outputMsg);
         this.addChatContent(this.myUserData, this.talkTo, this.outputMsg, true);
         this.socket.emit("message", {
           to: this.talkTo,
@@ -73,15 +129,19 @@ export default {
         this.outputMsg = "";
       }
     },
-    addChatContent(from, to, text, me) {
-      let user = me ? to : to !== "All" ? from : "All";
-      console.log("addChatContent user:", user);
-      this.fullChatContent[user].push({
+    addChatContent(from, to, text, isSent) {
+      let user = isSent ? to : to !== "All" ? from : "All";
+      this.fullChatContent[user].content.push({
+        from: from,
+        to: to,
         text: text,
+        isSent: isSent,
         id: this.counter++,
-        me: me,
       });
-      console.log("addChat:", this.fullChatContent[user]);
+      this.fullChatContent[user].latestMsgTime = new Date();
+      if (!isSent) {
+        this.fullChatContent[user].unread += 1;
+      }
       this.scrollChat();
     },
     scrollChat() {
@@ -91,21 +151,23 @@ export default {
         });
       }
     },
+
     switchUser() {},
   },
   watch: {
     talkTo: function () {
-      this.chatContent = this.fullChatContent[this.talkTo];
-      console.log("talkTo change:", this.talkTo);
+      this.chatContent = this.fullChatContent[this.talkTo].content;
+      console.log("watch talkTo change:", this.talkTo);
       this.scrollChat();
     },
   },
   mounted: function () {
+    //const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
+    //this.socket = io(HEROKU_SERVER);
     this.socket = io("http://localhost:5000");
     this.socket.on("connect", () => {
       console.log("chat socket connected.", this.socket.connected);
     });
-    console.log(this);
     this.socket.on("message", (msg) => {
       console.log("Received message :", msg);
       this.addChatContent(msg.from, msg.to, msg.text, false);
@@ -113,27 +175,32 @@ export default {
 
     this.socket.on("Update self", (name) => {
       this.myUserData = name;
-      console.log("UPdate self:", this.myUserData);
     });
 
     this.socket.on("Update users", (userData) => {
-      console.log("Update user list:" + userData);
       let idx = userData.findIndex((ele) => ele === this.myUserData);
       if (idx >= 0) {
         userData.splice(idx, 1);
       }
-      this.userList = userData;
-      this.userList.forEach((userName) => {
+      userData.forEach((userName) => {
+        /* if (this.userList[userName] === undefined) {
+          this.$set(this.userList, userName, {
+            name: userName,
+            unread: 0,
+            latestMsgTime: new Date(0),
+          });
+        } */
         if (this.fullChatContent[userName] === undefined) {
-          this.$set(this.fullChatContent, userName, []);
+          this.$set(this.fullChatContent, userName, {
+            unread: 0,
+            latestMsgTime: new Date(),
+            content: [],
+          });
         }
       });
       this.$nextTick(() => {
-        if (
-          this.$refs.selectUser.selectedIndex == -1 &&
-          this.userList.length > 0
-        ) {
-          this.talkTo = this.userList[0];
+        if (this.talkTo === "") {
+          this.talkTo = "All";
         }
       });
     });
@@ -142,42 +209,53 @@ export default {
 </script>
 
 <style scoped>
-.chat-button {
-  position: fixed;
-  background-color: orangered;
-  border-color: transparent;
-  right: 30px;
-  bottom: 0px;
-  width: 90px;
-  z-index: 2;
-}
-
-.chat-button:hover {
-  background-color: rgb(253, 82, 2);
-  border: solid 1px black;
-}
-
-.chat-main-container {
+.chat-main-layout {
   position: fixed;
   right: 30px;
   bottom: 0px;
   display: flex;
   flex-direction: column;
   background-color: white;
-  border: 1px solid lightgray;
-  width: 350px;
-  height: 350px;
-  z-index: 3;
+  border: lightgray solid 1px;
+  opacity: 1;
+  z-index: 999;
 }
 
-.chat-title-container {
+.chat-title-layout {
   background-color: white;
   display: flex;
   flex-grow: 0;
-  flex-direction: row-reverse;
   border-bottom: 1px solid lightgray;
   width: 100%;
-  height: 30px;
+}
+
+.chat-title-left {
+  display: flex;
+  flex-direction: row;
+}
+
+.chat-title-right {
+  display: flex;
+  flex-direction: row-reverse;
+  flex-grow: 1;
+}
+
+.chat-button {
+  color: orangered;
+  padding: 8px 16px 8px 16px;
+  pointer-events: none;
+}
+
+.minimized.chat-button {
+  color: orangered;
+  border-color: transparent;
+  border-radius: 3px;
+  padding: 8px 16px 8px 16px;
+  pointer-events: auto;
+}
+
+.minimized.chat-button:hover {
+  border: solid 1px black;
 }
 
 .mini-button {
@@ -191,43 +269,74 @@ export default {
   margin-right: 10px;
 }
 
-.center-container {
+.minimized.chat-windows-layout,
+.minimized.mini-button {
+  width: 0px;
+  height: 0px;
+  opacity: 0;
+  transform: scale(0);
+  margin-right: 0;
+}
+
+.chat-windows-layout {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  width: 400px;
+  height: 370px;
+  transition: all 0.25s;
+  transform-origin: right bottom;
+  transform: scale(1);
+}
+
+.chat-content-layout {
+  flex-grow: 1;
   display: flex;
   flex-direction: row;
-  flex-grow: 9;
   overflow: auto;
 }
-.chat-content {
-  flex-grow: 2;
-  width: 70%;
+.chat-conversation-laout {
+  display: flex;
+  flex-direction: column;
   font-size: 14px;
   overflow: auto;
+  width: 70%;
 }
 
-.chat-list {
+.chat-item-layout {
   display: flex;
-  overflow-wrap: anywhere;
+  flex-direction: column;
   padding: 5px;
-  min-width: 1%;
+  width: auto;
 }
 
-.my-list {
+.sent-item {
   display: flex;
   flex-direction: row-reverse;
+  text-align: right;
+}
+
+.received-item-layout {
+  display: flex;
+  flex-direction: column;
+}
+.received-item {
+  display: flex;
 }
 
 .chat-text {
-  max-width: 80%;
+  flex-grow: 0;
+  overflow-wrap: break-word;
   padding: 3px 10px 5px 10px;
-  border-radius: 4px;
+  border-radius: 3px;
+  max-width: 90%;
 }
 
-.my-text {
+.sent-text {
   background-color: #d7e4ff;
-  justify-content: flex-end;
 }
 
-.other-text {
+.received-text {
   background-color: #f5f6f8;
 }
 
@@ -235,29 +344,41 @@ select:focus {
   outline: 0;
 }
 
-.chat-users {
+.chat-user-list {
+  display: flex;
   overflow: auto;
-  border: lightgray solid 1px;
+  border-left: 1px solid lightgray;
   width: 30%;
 }
 
-.user {
+.chat-user {
   font-size: 10px;
   font-weight: bold;
   padding: 5px;
   overflow-wrap: anywhere;
 }
 
-.chat-input-container {
-  flex-grow: 0;
+.chat-user:hover {
+  background-color: rgb(245, 245, 245);
+}
+
+.chat-user-list > .selected-user {
+  background-color: gainsboro;
+}
+
+.chat-user .unread {
+  background-color: orangered;
+  float: right;
+}
+
+.chat-input-layout {
   display: flex;
   width: 100%;
   height: 25px;
   font-size: 10px;
 }
 
-#chat-input {
-  border: solid 1px black;
+.chat-input {
   flex-grow: 1;
 }
 
