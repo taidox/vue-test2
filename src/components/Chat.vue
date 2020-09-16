@@ -1,7 +1,11 @@
 <template>
   <div>
-    <!-- <transition name="chat-scale"> -->
     <div :class="['chat-main-layout', {'minimized': minimize}]">
+      <b-badge
+        pill
+        :class="['total-unread', {'minimized': minimize}]"
+        v-show="totalUnread>0"
+      >{{totalUnread}}</b-badge>
       <div class="chat-title-layout">
         <div class="chat-title-left">
           <div :class="['chat-button', {'minimized': minimize}]" v-on:click="onChatButtonClick">
@@ -14,19 +18,24 @@
       </div>
       <div :class="['chat-windows-layout',{'minimized': minimize}]">
         <div class="chat-content-layout">
-          <div class="chat-conversation-laout">
+          <div class="chat-conversation-laout" ref="chatContentDiv">
             <div class="chat-item-layout" v-for="content in chatContent" :key="content.id">
-              <div v-if="content.isSent" class="sent-item">
-                <div class="chat-text sent-text">{{content.text}}</div>
+              <div v-if="!content.isSent" class="received-item">
+                <p class="chat-from">{{content.from==='All'?'廣播':content.from}}:</p>
               </div>
-              <div v-else class="received-item-layout">
+              <div :class="content.isSent?'sent-item':'received-item'">
+                <p
+                  :class="['chat-text', content.isSent?'sent-text':'received-text']"
+                >{{content.text}}</p>
+              </div>
+              <!-- <div v-else class="received-item-layout">
                 <div class="received-item">
-                  <div>{{content.from==='All'?'廣播':content.from}}：</div>
+                  <p class="chat-from">{{content.from==='All'?'廣播':content.from}}:</p>
                 </div>
                 <div class="received-item">
-                  <div class="chat-text received-text">{{content.text}}</div>
+                  <p class="chat-text received-text">{{content.text}}</p>
                 </div>
-              </div>
+              </div>-->
             </div>
           </div>
           <b-list-group class="chat-user-list">
@@ -38,7 +47,7 @@
               @click="onClickUser"
               :class="{'selected-user' : user.name === talkTo}"
             >
-              {{user.name}}
+              {{user.name==="All"?'大廳':user.name}}
               <b-badge class="unread" v-if="user.unread>0">{{user.unread}}</b-badge>
             </b-list-group-item>
           </b-list-group>
@@ -49,7 +58,6 @@
         </div>
       </div>
     </div>
-    <!-- </transition> -->
   </div>
 </template>
 
@@ -95,6 +103,13 @@ export default {
       });
       console.log("Sorted :", sorted);
       return sorted;
+    },
+    totalUnread() {
+      let total = 0;
+      Object.keys(this.fullChatContent).forEach((name) => {
+        total += this.fullChatContent[name].unread;
+      });
+      return total;
     },
   },
   methods: {
@@ -145,11 +160,9 @@ export default {
       this.scrollChat();
     },
     scrollChat() {
-      if (!this.showButton) {
-        this.$nextTick(() => {
-          this.$refs.chatContentDiv.scrollTop = this.$refs.chatContentDiv.scrollHeight;
-        });
-      }
+      this.$nextTick(() => {
+        this.$refs.chatContentDiv.scrollTop = this.$refs.chatContentDiv.scrollHeight;
+      });
     },
 
     switchUser() {},
@@ -162,9 +175,9 @@ export default {
     },
   },
   mounted: function () {
-    const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
-    this.socket = io(HEROKU_SERVER);
-    //this.socket = io("http://localhost:5000");
+    //const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
+    //this.socket = io(HEROKU_SERVER);
+    this.socket = io("http://localhost:5000");
     this.socket.on("connect", () => {
       console.log("chat socket connected.", this.socket.connected);
     });
@@ -183,13 +196,6 @@ export default {
         userData.splice(idx, 1);
       }
       userData.forEach((userName) => {
-        /* if (this.userList[userName] === undefined) {
-          this.$set(this.userList, userName, {
-            name: userName,
-            unread: 0,
-            latestMsgTime: new Date(0),
-          });
-        } */
         if (this.fullChatContent[userName] === undefined) {
           this.$set(this.fullChatContent, userName, {
             unread: 0,
@@ -216,9 +222,24 @@ export default {
   display: flex;
   flex-direction: column;
   background-color: white;
-  border: lightgray solid 1px;
+  border: 1px solid lightgray;
   opacity: 1;
   z-index: 999;
+}
+
+.minimized.total-unread {
+  display: flex;
+  position: absolute;
+  right: -1em;
+  top: -1em;
+  background-color: orangered;
+  font-size: 0.4em;
+
+  color: white;
+}
+
+.total-unread {
+  display: none;
 }
 
 .chat-title-layout {
@@ -244,6 +265,7 @@ export default {
   color: orangered;
   padding: 8px 16px 8px 16px;
   pointer-events: none;
+  box-shadow: none;
 }
 
 .minimized.chat-button {
@@ -252,10 +274,11 @@ export default {
   border-radius: 3px;
   padding: 8px 16px 8px 16px;
   pointer-events: auto;
+  box-shadow: 5px 0px 3px lightgray;
 }
 
 .minimized.chat-button:hover {
-  border: solid 1px black;
+  border: 1px solid rgba(0, 0, 0, 0.185);
 }
 
 .mini-button {
@@ -306,7 +329,6 @@ export default {
 .chat-item-layout {
   display: flex;
   flex-direction: column;
-  padding: 5px;
   width: auto;
 }
 
@@ -324,10 +346,17 @@ export default {
   display: flex;
 }
 
+.chat-from {
+  margin-bottom: 0;
+  font-size: 0.8em;
+  overflow-wrap: break-word;
+}
+
 .chat-text {
   flex-grow: 0;
   overflow-wrap: break-word;
   padding: 3px 10px 5px 10px;
+  margin: 5px 2px;
   max-width: 90%;
 }
 

@@ -1,7 +1,7 @@
 <template>
   <b-container fluid="lg">
     <div>
-      <carousel></carousel>
+      <!-- <carousel></carousel> -->
 
       <t-bike-status></t-bike-status>
     </div>
@@ -9,13 +9,13 @@
 </template>
 
 <script>
-import Carousel from "./Carousel.vue";
+/* import Carousel from "./Carousel.vue"; */
 import TBikeStatus from "./TBikeStatus.vue";
 
 export default {
   name: "Home",
   components: {
-    Carousel,
+    /* Carousel, */
     TBikeStatus,
   },
   data() {
