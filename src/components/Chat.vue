@@ -19,7 +19,19 @@
       <div :class="['chat-windows-layout',{'minimized': minimize}]">
         <div class="chat-content-layout">
           <div class="chat-conversation-laout" ref="chatContentDiv">
-            <div class="chat-item-layout" v-for="content in chatContent" :key="content.id">
+            <div
+              class="chat-item-layout"
+              :class="content.isSent?'sent-item':'received-item'"
+              v-for="content in chatContent"
+              :key="content.id"
+            >
+              <p
+                v-if="!content.isSent"
+                class="chat-from"
+              >{{content.from==='All'?'管理員':content.from}}:</p>
+              <p :class="['chat-text', content.isSent?'sent-text':'received-text']">{{content.text}}</p>
+            </div>
+            <!-- <div class="chat-item-layout" v-for="content in chatContent" :key="content.id">
               <div v-if="!content.isSent" class="received-item">
                 <p class="chat-from">{{content.from==='All'?'廣播':content.from}}:</p>
               </div>
@@ -28,15 +40,7 @@
                   :class="['chat-text', content.isSent?'sent-text':'received-text']"
                 >{{content.text}}</p>
               </div>
-              <!-- <div v-else class="received-item-layout">
-                <div class="received-item">
-                  <p class="chat-from">{{content.from==='All'?'廣播':content.from}}:</p>
-                </div>
-                <div class="received-item">
-                  <p class="chat-text received-text">{{content.text}}</p>
-                </div>
-              </div>-->
-            </div>
+            </div>-->
           </div>
           <b-list-group class="chat-user-list">
             <b-list-group-item
@@ -318,6 +322,7 @@ export default {
   flex-direction: row;
   overflow: auto;
 }
+
 .chat-conversation-laout {
   display: flex;
   flex-direction: column;
@@ -333,11 +338,18 @@ export default {
 }
 
 .sent-item {
+  align-items: flex-end;
+}
+
+.received-item {
+  align-items: flex-start;
+}
+/* .sent-item {
   display: flex;
   flex-direction: row-reverse;
   text-align: right;
 }
-
+ 
 .received-item-layout {
   display: flex;
   flex-direction: column;
@@ -345,7 +357,7 @@ export default {
 .received-item {
   display: flex;
 }
-
+ */
 .chat-from {
   margin-bottom: 0;
   font-size: 0.8em;
@@ -356,18 +368,57 @@ export default {
   flex-grow: 0;
   overflow-wrap: break-word;
   padding: 3px 10px 5px 10px;
-  margin: 5px 2px;
+  margin: 5px 9px;
   max-width: 90%;
 }
 
 .sent-text {
-  background-color: #d7e4ff;
+  color: white;
+  background-color: #1877f2;
   border-radius: 8px 0 11px 8px;
+  position: relative;
+}
+
+.sent-text::after {
+  content: "";
+  top: 0px;
+  right: -7px;
+  position: absolute;
+  border: 0px solid;
+  display: block;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  border-top: 6px solid #1877f2;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #1877f2;
+  border-right: 6px solid transparent;
 }
 
 .received-text {
   background-color: #f5f6f8;
   border-radius: 0 8px 8px 11px;
+  position: relative;
+}
+
+.received-text::before {
+  content: "";
+  top: 1px;
+  left: -7px;
+  position: absolute;
+  border: 0px solid;
+  display: block;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  border-top: 6px solid #f5f6f8;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid transparent;
+  border-right: 6px solid #f5f6f8;
+}
+
+.received-text::before {
+  border-radius: 0px;
 }
 
 select:focus {

@@ -2,16 +2,22 @@
   <div>
     <b-container>
       <b-row>
-        <b-col cols="2">
-          <b-form-select v-model="selectedDistrict" :options="districts" @input="districtChanged"></b-form-select>
+        <b-col>
+          <b-form-select
+            class="d-flex flex-grow-0"
+            v-model="selectedDistrict"
+            :options="districts"
+            @input="districtChanged"
+          ></b-form-select>
+          <template v-slot:first>
+            <b-form-select-option :value="null">全區</b-form-select-option>
+          </template>
         </b-col>
-        <b-col cols="2">
+        <b-col>
           <b-button variant="danger" @click="updateData">更新</b-button>
         </b-col>
       </b-row>
-      <template v-slot:first>
-        <b-form-select-option :value="null">全區</b-form-select-option>
-      </template>
+
       <b-table
         :busy="isTableBusy"
         striped
@@ -22,6 +28,8 @@
         primary-key="Id"
         :filter="stationStatus"
         :filter-function="filterStation"
+        thead-class="tbike-header"
+        stacked="md"
       >
         <template v-slot:table-busy>
           <div class="text-center text-danger my-2">
@@ -29,10 +37,11 @@
             <strong>資料載入中...</strong>
           </div>
         </template>
+
         <template v-slot:cell(LatestAval)="data">
           <p>{{data.item.AvaliableBikeCount}}</p>
           <p
-            class="update-timer"
+            class="update-time"
             v-html="(new Date(data.item.UpdateTime)).toLocaleString().replace(' ','<br>')"
           ></p>
         </template>
@@ -44,13 +53,23 @@
             :center="{lat:row.item.Latitude, lng:row.item.Longitude}"
             :zoom="16"
             map-type-id="terrain"
-            style="width: vw; height: 300px"
+            style="width: 100%; height: 400px;"
+            ref="refmap"
           >
             <GmapMarker
-              :position="{lat:row.item.Latitude, lng:row.item.Longitude}"
+              v-for="station in stationStatus"
+              :key="station.StationName"
+              :position="{lat:station.Latitude, lng:station.Longitude}"
               :clickable="true"
-              :draggable="true"
-            />
+              :draggable="false"
+              @click="onClickMarker(station)"
+            ></GmapMarker>
+            <GmapInfoWindow
+              :options="infoWindowOptions"
+              :position="infoWindowPos"
+              :opened="infoWinOpen"
+              @closeclick="infoWinOpen=false"
+            ></GmapInfoWindow>
           </GmapMap>
         </template>
       </b-table>
@@ -68,6 +87,7 @@ export default {
   components: {},
   data() {
     return {
+      showGmap: false,
       stationStatus: null,
       fields: [
         { key: "Id", label: "ID", class: "d-none" },
@@ -75,14 +95,27 @@ export default {
         { key: "StationName", label: "站名" },
         { key: "Address", label: "位置" },
 
-        { key: "LatestAval", label: "最新可出租數", class: "text-center" },
-        { key: "Capacity", label: "容量", class: "text-center" },
+        { key: "LatestAval", label: "可借車輛", class: "text-md-center" },
+        {
+          key: "AvaliableSpaceCount",
+          label: "可停車位",
+          class: "text-md-center",
+        },
         { key: "ShowDetails", label: "詳細內容" },
       ],
       isTableBusy: true,
       showAlert: false,
       districts: null,
       selectedDistrict: null,
+      infoWindowPos: null,
+      infoWindowOptions: {
+        content: "",
+        pixelOffset: {
+          width: 0,
+          height: -35,
+        },
+      },
+      infoWinOpen: true,
     };
   },
   methods: {
@@ -147,6 +180,12 @@ export default {
           this.showAlert = true;
         });
     },
+    onClickMarker(station) {
+      this.infoWindowPos = { lat: station.Latitude, lng: station.Longitude };
+      this.infoWindowOptions.content =
+        "<strong>" + station.StationName + "</strong>";
+      this.infoWinOpen = true;
+    },
   },
   created() {
     /* this.stationStatus = TBikeStationData;
@@ -170,8 +209,14 @@ export default {
   },
 };
 </script>
+
 <style scoped>
+#TStation >>> .tbike-header {
+  background-color: DarkSeaGreen;
+}
+
 .update-time {
-  font-size: 0.5em;
+  font-size: 0.6em;
+  margin: 0;
 }
 </style>
