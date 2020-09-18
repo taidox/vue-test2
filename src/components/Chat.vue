@@ -179,9 +179,9 @@ export default {
     },
   },
   mounted: function () {
-    //const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
-    //this.socket = io(HEROKU_SERVER);
-    this.socket = io("http://localhost:5000");
+    const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
+    this.socket = io(HEROKU_SERVER);
+    //this.socket = io("http://localhost:5000");
     this.socket.on("connect", () => {
       console.log("chat socket connected.", this.socket.connected);
     });
