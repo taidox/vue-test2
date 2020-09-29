@@ -1,46 +1,54 @@
 <template>
   <div>
-    <div :class="['chat-main-layout', {'minimized': minimize}]">
+    <div :class="['chat-main-layout', { minimized: minimize }]">
       <b-badge
         pill
-        :class="['total-unread', {'minimized': minimize}]"
-        v-show="totalUnread>0"
-      >{{totalUnread}}</b-badge>
+        :class="['total-unread', { minimized: minimize }]"
+        v-show="totalUnread > 0"
+        >{{ totalUnread }}</b-badge
+      >
       <div class="chat-title-layout">
         <div class="chat-title-left">
-          <div :class="['chat-button', {'minimized': minimize}]" v-on:click="onChatButtonClick">
+          <div
+            :class="['chat-button', { minimized: minimize }]"
+            v-on:click="onChatButtonClick"
+          >
             <strong>聊天</strong>
           </div>
         </div>
         <div class="chat-title-right">
-          <div :class="['mini-button', {'minimized': minimize}]" @click="onMinimizeChat"></div>
+          <div
+            :class="['mini-button', { minimized: minimize }]"
+            @click="onMinimizeChat"
+          ></div>
         </div>
       </div>
-      <div :class="['chat-windows-layout',{'minimized': minimize}]">
+      <div :class="['chat-windows-layout', { minimized: minimize }]">
         <div class="chat-content-layout">
           <div class="chat-conversation-laout" ref="chatContentDiv">
             <div
-              class="chat-item-layout"
-              :class="content.isSent?'sent-item':'received-item'"
               v-for="content in chatContent"
               :key="content.id"
+              class="chat-item-layout"
+              :class="
+                content.from === myUserData ? 'sent-item' : 'received-item'
+              "
             >
+              <div class="message-time">
+                {{ new Date(content.time).toLocaleString() }}
+              </div>
+              <p v-if="content.from !== myUserData" class="chat-from">
+                {{ content.from === "All" ? "管理員" : content.from }}:
+              </p>
               <p
-                v-if="!content.isSent"
-                class="chat-from"
-              >{{content.from==='All'?'管理員':content.from}}:</p>
-              <p :class="['chat-text', content.isSent?'sent-text':'received-text']">{{content.text}}</p>
+                :class="[
+                  'chat-text',
+                  content.from === myUserData ? 'sent-text' : 'received-text',
+                ]"
+              >
+                {{ content.text }}
+              </p>
             </div>
-            <!-- <div class="chat-item-layout" v-for="content in chatContent" :key="content.id">
-              <div v-if="!content.isSent" class="received-item">
-                <p class="chat-from">{{content.from==='All'?'廣播':content.from}}:</p>
-              </div>
-              <div :class="content.isSent?'sent-item':'received-item'">
-                <p
-                  :class="['chat-text', content.isSent?'sent-text':'received-text']"
-                >{{content.text}}</p>
-              </div>
-            </div>-->
           </div>
           <b-list-group class="chat-user-list">
             <b-list-group-item
@@ -49,15 +57,21 @@
               :key="user.name"
               :value="user.name"
               @click="onClickUser"
-              :class="{'selected-user' : user.name === talkTo}"
+              :class="{ 'selected-user': user.name === talkTo }"
             >
-              {{user.name==="All"?'大廳':user.name}}
-              <b-badge class="unread" v-if="user.unread>0">{{user.unread}}</b-badge>
+              {{ user.name === "All" ? "大廳" : user.name }}
+              <b-badge class="unread" v-if="user.unread > 0">{{
+                user.unread
+              }}</b-badge>
             </b-list-group-item>
           </b-list-group>
         </div>
         <div class="chat-input-layout">
-          <input v-model="outputMsg" class="chat-input" @keyup.13="sendMessage" />
+          <input
+            v-model="outputMsg"
+            class="chat-input"
+            @keyup.13="sendMessage"
+          />
           <button class="chat-send" v-on:click="sendMessage">Send</button>
         </div>
       </div>
@@ -140,7 +154,7 @@ export default {
     },
     sendMessage() {
       if (this.socket.connected && this.outputMsg.length > 0) {
-        this.addChatContent(this.myUserData, this.talkTo, this.outputMsg, true);
+        //this.addChatContent(this.myUserData, this.talkTo, this.outputMsg, true);
         this.socket.emit("message", {
           to: this.talkTo,
           text: this.outputMsg,
@@ -148,18 +162,34 @@ export default {
         this.outputMsg = "";
       }
     },
-    addChatContent(from, to, text, isSent) {
-      let user = isSent ? to : to !== "All" ? from : "All";
+    addChatContent(msgData) {
+      console.log("addChatContent msgData:", msgData);
+      let channel =
+        msgData.from === "All" || msgData.to === "All"
+          ? "All"
+          : msgData.from === this.myUserData
+          ? msgData.to
+          : msgData.from;
+      console.log("Add chat to channel:", channel);
+      this.fullChatContent[channel].content.push({
+        from: msgData.from,
+        to: msgData.to,
+        text: msgData.text,
+        time: msgData.time,
+        id: this.counter++,
+      });
+
+      /* let user = isSent ? to : to !== "All" ? from : "All";
       this.fullChatContent[user].content.push({
         from: from,
         to: to,
         text: text,
         isSent: isSent,
         id: this.counter++,
-      });
-      this.fullChatContent[user].latestMsgTime = new Date();
-      if (!isSent) {
-        this.fullChatContent[user].unread += 1;
+      }); */
+      this.fullChatContent[channel].latestMsgTime = msgData.time;
+      if (msgData.from !== this.myUserData) {
+        this.fullChatContent[channel].unread += 1;
       }
       this.scrollChat();
     },
@@ -179,15 +209,15 @@ export default {
     },
   },
   mounted: function () {
-    const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
-    this.socket = io(HEROKU_SERVER);
-    //this.socket = io("http://localhost:5000");
+    //const HEROKU_SERVER = "https://chat4tiny.herokuapp.com/";
+    //this.socket = io(HEROKU_SERVER);
+    this.socket = io("http://localhost:5000");
     this.socket.on("connect", () => {
       console.log("chat socket connected.", this.socket.connected);
     });
     this.socket.on("message", (msg) => {
       console.log("Received message :", msg);
-      this.addChatContent(msg.from, msg.to, msg.text, false);
+      this.addChatContent(msg);
     });
 
     this.socket.on("Update self", (name) => {
@@ -309,7 +339,7 @@ export default {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  width: 400px;
+  width: 450px;
   height: 370px;
   transition: all 0.25s;
   transform-origin: right bottom;
@@ -326,6 +356,7 @@ export default {
 .chat-conversation-laout {
   display: flex;
   flex-direction: column;
+  background-color: #f2f2f2;
   font-size: 14px;
   overflow: auto;
   width: 70%;
@@ -337,6 +368,11 @@ export default {
   width: auto;
 }
 
+.message-time {
+  align-self: center;
+  font-size: 60%;
+}
+
 .sent-item {
   align-items: flex-end;
 }
@@ -344,20 +380,7 @@ export default {
 .received-item {
   align-items: flex-start;
 }
-/* .sent-item {
-  display: flex;
-  flex-direction: row-reverse;
-  text-align: right;
-}
- 
-.received-item-layout {
-  display: flex;
-  flex-direction: column;
-}
-.received-item {
-  display: flex;
-}
- */
+
 .chat-from {
   margin-bottom: 0;
   font-size: 0.8em;
@@ -375,7 +398,7 @@ export default {
 .sent-text {
   color: white;
   background-color: #1877f2;
-  border-radius: 8px 0 11px 8px;
+  border-radius: 8px 0 8px 8px;
   position: relative;
 }
 
@@ -396,14 +419,14 @@ export default {
 }
 
 .received-text {
-  background-color: #f5f6f8;
-  border-radius: 0 8px 8px 11px;
+  background-color: white;
+  border-radius: 0 8px 8px 8px;
   position: relative;
 }
 
 .received-text::before {
   content: "";
-  top: 1px;
+  top: 0px;
   left: -7px;
   position: absolute;
   border: 0px solid;
@@ -411,10 +434,10 @@ export default {
   width: 0;
   height: 0;
   background-color: transparent;
-  border-top: 6px solid #f5f6f8;
+  border-top: 6px solid white;
   border-bottom: 6px solid transparent;
   border-left: 6px solid transparent;
-  border-right: 6px solid #f5f6f8;
+  border-right: 6px solid white;
 }
 
 .received-text::before {
@@ -433,7 +456,7 @@ select:focus {
 }
 
 .chat-user {
-  font-size: 10px;
+  font-size: 0.8px;
   font-weight: bold;
   padding: 5px;
   overflow-wrap: anywhere;
@@ -456,7 +479,6 @@ select:focus {
   display: flex;
   width: 100%;
   height: 25px;
-  font-size: 10px;
 }
 
 .chat-input {
